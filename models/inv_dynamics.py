@@ -6,7 +6,7 @@ class InverseDynamics(nn.Module):
     def __init__(
         self, hidden_dim, observation_dim, action_dim, low_act=-1.0, up_act=1.0
     ):
-        super(ARInvModel, self).__init__()
+        super(InverseDynamics, self).__init__()
         self.observation_dim = observation_dim
         self.action_dim = action_dim
 

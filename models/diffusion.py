@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from utils.helpers import cosine_beta_schedule, extract
+from utils.model_helpers import cosine_beta_schedule, extract
 
 
 Denoiser = Callable[..., Tensor]
