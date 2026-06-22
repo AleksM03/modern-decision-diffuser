@@ -228,4 +228,5 @@ wheels/
 
 # Virtual environments
 .venv
->>>>>>> f3f12d7 (initial commit)
+
+legacy/
