@@ -1,8 +1,12 @@
 import argparse
+import time
+import os
 
 import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+
+from utils.logging import Logger, dump_log
 
 from data import MinariSequenceDataset, collate_trajectory_batches
 from models import DecisionDiffuser, TemporalUnet
@@ -37,8 +41,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
+def main(logger: Logger, args:argparse.Namespace):
     device = torch.device(args.device)
 
     dataset = MinariSequenceDataset(
@@ -112,5 +115,16 @@ def main():
         )
 
 
+def make_logger(args: argparse.Namespace) -> Logger:
+    logdir = "{}_{}_{}".format(args.dataset_id, args.diffusion_steps, time.strftime("%Y%m%d_%H%M%S")
+    )
+    logdir = os.path.join("exp", logdir)
+    os.makedirs(logdir, exist_ok=True)
+
+    return Logger(log_dir=logdir, csv_path=os.path.join(logdir, "log.csv"))
+
+
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    logger = make_logger(args)
+    main(logger, args)
