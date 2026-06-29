@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "minari[all]>=0.5.3",
-    "mujoco>=3.9.0",
+    "mujoco==3.2.3",
     "tensorboard>=2.20.0",
     "setuptools==81.0.0",
     "torch>=2.12.1",
@@ -14,4 +14,7 @@ dependencies = [
     "gymnasium[all]>=1.3.0",
     "modal>=1.5.0",
     "tqdm>=4.68.3",
+    "moviepy<2",
+    "imageio>=2.37.3",
+    "requests>=2.34.2",
 ]

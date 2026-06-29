@@ -1,14 +1,14 @@
-import copy
 import json
 import os
 import pickle
 from datetime import datetime
-from numbers import Number
 
 import numpy as np
 import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
+
+from utils.pytorch_utils import to_scalar
 
 
 class Logger:
@@ -23,21 +23,11 @@ class Logger:
         self.writer = SummaryWriter(log_dir=log_dir)
         self.rows = []
 
-    def _to_scalar(self, value):
-        if isinstance(value, Number):
-            return value
-        if isinstance(value, np.ndarray) and value.shape == ():
-            return value.item()
-        return None
-
     def log(self, row, step):
-        row = copy.deepcopy(row)
-        row["step"] = step
-
         scalar_row = {
             key: scalar
-            for key, value in row.items()
-            if (scalar := self._to_scalar(value)) is not None
+            for key, value in {**row, "step": step}.items()
+            if (scalar := to_scalar(value)) is not None
         }
 
         new_keys = [
@@ -56,7 +46,7 @@ class Logger:
                 prev_scalar_row = {
                     key: scalar
                     for key, value in prev_row.items()
-                    if (scalar := self._to_scalar(value)) is not None
+                    if (scalar := to_scalar(value)) is not None
                 }
                 self.file.write(
                     ",".join(str(prev_scalar_row.get(key, "")) for key in self.header)
@@ -72,11 +62,11 @@ class Logger:
             if key != "step":
                 self.writer.add_scalar(key, value, step)
         self.writer.flush()
-        self.rows.append(row)
+        self.rows.append(scalar_row)
 
     def log_scalar(self, scalar, name, step):
         """Log a single scalar value."""
-        value = self._to_scalar(scalar)
+        value = to_scalar(scalar)
         if value is not None:
             self.writer.add_scalar(name, value, step)
             self.writer.flush()

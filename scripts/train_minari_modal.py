@@ -30,7 +30,7 @@ def load_gitignore_patterns() -> list[str]:
     if not gitignore_path.is_file():
         return []
 
-    patterns: list[str] = []
+    patterns: list[str] = ["**/exp/**"]
     for line in gitignore_path.read_text(encoding="utf-8").splitlines():
         entry = line.strip()
         if not entry or entry.startswith("#") or entry.startswith("!"):
@@ -47,7 +47,16 @@ def load_gitignore_patterns() -> list[str]:
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .apt_install("libgl1", "libglib2.0-0", "libosmesa6", "patchelf", "swig")
+    .apt_install(
+        "libegl1",
+        "libgl1",
+        "libgles2",
+        "libglib2.0-0",
+        "libglvnd0",
+        "libosmesa6",
+        "patchelf",
+        "swig",
+    )
     .uv_sync()
     .add_local_dir(
     ".", remote_path=PROJECT_DIR, ignore=load_gitignore_patterns()
@@ -67,7 +76,14 @@ image = (
     },
 )
 def train(*args: str) -> None:
+    import faulthandler
+
+    faulthandler.enable(all_threads=True)
+    print("modal: starting train entrypoint", flush=True)
+
     os.chdir(PROJECT_DIR)
+    print("modal: project dir ready", flush=True)
+
     minari_home = Path(VOLUME_PATH) / "minari"
     minari_home.mkdir(parents=True, exist_ok=True)
 
@@ -78,16 +94,42 @@ def train(*args: str) -> None:
     elif default_minari_home.exists() or default_minari_home.is_symlink():
         default_minari_home.unlink()
     default_minari_home.symlink_to(minari_home)
+    print("modal: minari volume ready", flush=True)
 
+    exp_vol = Path(VOLUME_PATH) / "exp"
+    exp_vol.mkdir(parents=True, exist_ok=True)
+
+    exp_link = Path(PROJECT_DIR) / "exp"
+    if exp_link.is_dir() and not exp_link.is_symlink():
+        import shutil
+        shutil.rmtree(exp_link)
+    elif exp_link.exists() or exp_link.is_symlink():
+        exp_link.unlink()
+    exp_link.symlink_to(exp_vol)
+    print("modal: exp volume ready", flush=True)
+
+    if "--eval-video" in args:
+        args = tuple(arg for arg in args if arg != "--eval-video")
+        print("modal: eval video disabled in training container", flush=True)
+
+    print("modal: importing train_minari", flush=True)
     from scripts.train_minari import main as train_main
+    from scripts.train_minari import make_logger, parse_args
 
-    sys.argv = [
-        "train_minari.py",
-        *args,
-        "--device",
-        "cuda",
-    ]
-    train_main()
+    sys.argv = ["train_minari.py", *args]
+    if "--device" not in args:
+        sys.argv.extend(["--device", "cuda"])
+    print("modal: parsing args", flush=True)
+    train_args = parse_args()
+    print(f"modal: parsed args {train_args}", flush=True)
+
+    logger = make_logger(train_args)
+    print("modal: launching training", flush=True)
+    try:
+        train_main(logger, train_args)
+    finally:
+        logger.close()
+    print("modal: committing volume", flush=True)
     volume.commit()
 
 

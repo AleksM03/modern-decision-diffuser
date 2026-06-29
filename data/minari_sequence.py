@@ -51,13 +51,13 @@ class MinariSequenceDataset(Dataset):
         self.include_returns = include_returns
         self.normalize_observations = normalize_observations
 
-        minari_dataset = minari.load_dataset(dataset_id, download=download)
-        self.env = minari_dataset.recover_environment()
-        self.observation_dim = int(np.prod(minari_dataset.observation_space.shape))
-        self.action_dim = int(np.prod(minari_dataset.action_space.shape))
+        self.minari_dataset = minari.load_dataset(dataset_id, download=download)
+        self.env = self.minari_dataset.recover_environment()
+        self.observation_dim = int(np.prod(self.minari_dataset.observation_space.shape))
+        self.action_dim = int(np.prod(self.minari_dataset.action_space.shape))
 
         episodes = []
-        for i, episode in enumerate(minari_dataset.iterate_episodes()):
+        for i, episode in enumerate(self.minari_dataset.iterate_episodes()):
             if max_episodes is not None and i >= max_episodes:
                 break
 
@@ -156,6 +156,14 @@ class MinariSequenceDataset(Dataset):
         if self.observation_normalizer is None:
             return observations
         return self.observation_normalizer.unnormalize(observations)
+
+    def recover_environment(self, **kwargs):
+        try:
+            return self.minari_dataset.recover_environment(**kwargs)
+        except TypeError:
+            if kwargs:
+                return self.minari_dataset.recover_environment()
+            raise
 
 
 def collate_trajectory_batches(batches: list[TrajectoryBatch]) -> TrajectoryBatch:
