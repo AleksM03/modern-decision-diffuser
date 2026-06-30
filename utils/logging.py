@@ -94,7 +94,7 @@ class Logger:
         self.writer.flush()
 
     def log_paths_as_videos(
-        self, paths, step, max_videos_to_save=2, fps=10, video_title="video"
+        self, paths, step, max_videos_to_save=2, fps=30, video_title="video"
     ):
         """Alias for log_trajs_as_videos for compatibility."""
         self.log_trajs_as_videos(paths, step, max_videos_to_save, fps, video_title)

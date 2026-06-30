@@ -10,8 +10,10 @@ import torch
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 
+from utils.config_helpers import apply_checkpoint_config
 from utils.eval_helpers import run_eval
 from utils.logging import Logger, dump_log
+from utils.pytorch_utils import load_model_from_checkpoint_dir
 
 from data import MinariSequenceDataset, collate_trajectory_batches
 from models import DecisionDiffuser, TemporalUnet
@@ -48,12 +50,16 @@ def parse_args():
     parser.add_argument("--eval-episodes", type=int, default=3)
     parser.add_argument("--eval-length", type=int, default=1000)
     parser.add_argument("--eval-video", action="store_true")
-    parser.add_argument("--video-fps", type=int, default=20)
+    parser.add_argument("--video-fps", type=int, default=30)
     parser.add_argument("--checkpoint-interval", type=int, default=0)
+    parser.add_argument("--checkpoint-dir")
     return parser.parse_args()
 
 
 def main(logger: Logger, args: argparse.Namespace):
+    if args.checkpoint_dir is not None:
+        apply_checkpoint_config(args)
+
     device = torch.device(args.device)
 
     dataset = MinariSequenceDataset(
@@ -100,6 +106,14 @@ def main(logger: Logger, args: argparse.Namespace):
         returns_condition=args.returns_condition,
         condition_guidance_w=args.condition_guidance_w,
     ).to(device)
+
+    if args.checkpoint_dir is not None:
+        checkpoint_path = load_model_from_checkpoint_dir(
+            model,
+            args.checkpoint_dir,
+            device,
+        )
+        print(f"Loaded checkpoint from {checkpoint_path}")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
