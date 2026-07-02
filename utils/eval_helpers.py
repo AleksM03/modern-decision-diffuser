@@ -3,6 +3,7 @@ import torch
 from tqdm import tqdm
 
 
+
 def format_action(action, action_space):
     action = action.detach().cpu().numpy()
     action = np.clip(action, action_space.low.reshape(-1), action_space.high.reshape(-1))
@@ -15,10 +16,17 @@ def render_frame(env):
         return None
     return np.asarray(frame, dtype=np.uint8)
 
+def get_observation_from_dict(observation):
+    if isinstance(observation, dict):
+        return observation["observation"]
+    return observation
+
+
 
 @torch.no_grad()
 def rollout_policy(model, env, dataset, device, args, *, record_video=False):
     observation, _ = env.reset()
+    observation = get_observation_from_dict(observation)
     rewards = []
     actions = []
     frames = []
@@ -58,6 +66,7 @@ def rollout_policy(model, env, dataset, device, args, *, record_video=False):
         action = format_action(action, env.action_space)
 
         observation, reward, terminated, truncated, info = env.step(action)
+        observation = get_observation_from_dict(observation)
         rewards.append(float(reward))
         actions.append(action.reshape(-1))
 

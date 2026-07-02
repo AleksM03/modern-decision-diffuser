@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument("--eval-episodes", type=int, default=3)
     parser.add_argument("--eval-length", type=int, default=1000)
     parser.add_argument("--eval-video", action="store_true")
-    parser.add_argument("--video-fps", type=int, default=30)
+    parser.add_argument("--video-fps", type=int, default=10)
     parser.add_argument("--checkpoint-interval", type=int, default=0)
     parser.add_argument("--checkpoint-dir")
     return parser.parse_args()

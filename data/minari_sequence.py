@@ -1,6 +1,7 @@
 from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any
+from gymnasium.spaces.dict import Dict
 
 import minari
 import numpy as np
@@ -53,7 +54,10 @@ class MinariSequenceDataset(Dataset):
 
         self.minari_dataset = minari.load_dataset(dataset_id, download=download)
         self.env = self.minari_dataset.recover_environment()
-        self.observation_dim = int(np.prod(self.minari_dataset.observation_space.shape))
+        if type(self.minari_dataset.observation_space) is Dict:
+            self.observation_dim = int(np.prod(self.minari_dataset.observation_space["observation"].shape))
+        else:
+            self.observation_dim = int(np.prod(self.minari_dataset.observation_space.shape))
         self.action_dim = int(np.prod(self.minari_dataset.action_space.shape))
 
         episodes = []
@@ -61,7 +65,10 @@ class MinariSequenceDataset(Dataset):
             if max_episodes is not None and i >= max_episodes:
                 break
 
-            observations = self._as_flat_float_array(episode.observations)
+            if type(self.minari_dataset.observation_space) is Dict:
+                observations = self._as_flat_float_array(episode.observations["observation"])
+            else:
+                observations = self._as_flat_float_array(episode.observations)
             actions = self._as_flat_float_array(episode.actions)
             rewards = np.asarray(episode.rewards, dtype=np.float32)
 

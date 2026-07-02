@@ -129,10 +129,32 @@ def train(*args: str) -> None:
         train_main(logger, train_args)
     finally:
         logger.close()
-    print("modal: committing volume", flush=True)
-    volume.commit()
+        print("modal: committing volume", flush=True)
+        volume.commit()
 
 
 @app.local_entrypoint()
 def main(*args: str) -> None:
-    train.remote(*args)
+    wait = False
+    train_args = list(args)
+    if "--wait" in train_args:
+        wait = True
+        train_args.remove("--wait")
+
+    call = train.spawn(*train_args)
+    print(f"modal: submitted training call {call.object_id}", flush=True)
+    print("modal: safe to close this terminal now", flush=True)
+    print(
+        "modal: follow logs with "
+        f"`modal app logs {app.name} --function-call {call.object_id} -f`",
+        flush=True,
+    )
+    print(
+        "modal: fetch recent logs with "
+        f"`modal app logs {app.name} --function-call {call.object_id} --tail 200`",
+        flush=True,
+    )
+
+    if wait:
+        print("modal: --wait supplied; waiting for training to finish", flush=True)
+        call.get()

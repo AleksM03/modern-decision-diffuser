@@ -17,4 +17,5 @@ dependencies = [
     "moviepy<2",
     "imageio>=2.37.3",
     "requests>=2.34.2",
+    "gymnasium-robotics>=1.4.2",
 ]
