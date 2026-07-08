@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 
@@ -33,13 +33,14 @@ def rollout_policy(model, env, dataset, device, args, *, record_video=False):
     success = None
     terminated = False
     truncated = False
+    target_return = args.eval_return
 
     if record_video:
         frame = render_frame(env)
         if frame is not None:
             frames.append(frame)
 
-    for _ in tqdm(range(args.eval_length), desc="eval", dynamic_ncols=True):
+    for _ in tqdm(range(args.eval_length), desc="eval", dynamic_ncols=True, leave=False):
         observation = np.asarray(observation, dtype=np.float32).reshape(-1)
         if dataset.observation_normalizer is not None:
             observation = dataset.observation_normalizer.normalize(observation[None])[0]
@@ -51,7 +52,7 @@ def rollout_policy(model, env, dataset, device, args, *, record_video=False):
         ).unsqueeze(0)
         returns = None
         if args.returns_condition:
-            returns = torch.full((1, 1), args.eval_return, device=device)
+            returns = torch.full((1, 1), target_return, device=device)
 
         sampled_observations = model.sample(
             {0: observation},
@@ -69,6 +70,11 @@ def rollout_policy(model, env, dataset, device, args, *, record_video=False):
         observation = get_observation_from_dict(observation)
         rewards.append(float(reward))
         actions.append(action.reshape(-1))
+
+        if args.returns_condition:
+            target_return = (
+                target_return - float(reward) / args.returns_scale
+            ) / dataset.discount
 
         if "success" in info:
             success = float(info["success"])
@@ -136,6 +142,8 @@ def run_eval(model, dataset, device, args, logger, step):
         "eval/action_mean": np.mean([result["action_mean"] for result in results]),
         "eval/action_std": np.mean([result["action_std"] for result in results]),
     }
+    if args.returns_condition:
+        eval_row["eval/target_return"] = args.eval_return
 
     successes = [result["success"] for result in results if "success" in result]
     if successes:

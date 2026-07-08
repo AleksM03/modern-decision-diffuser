@@ -72,7 +72,7 @@ class Logger:
             self.writer.flush()
 
     def log_trajs_as_videos(
-        self, trajs, step, max_videos_to_save=2, fps=10, video_title="video"
+        self, trajs, step, max_videos_to_save=2, fps=30, video_title="video"
     ):
         videos = [
             traj["image_obs"]

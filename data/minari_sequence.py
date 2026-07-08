@@ -159,6 +159,23 @@ class MinariSequenceDataset(Dataset):
             returns=torch.as_tensor(returns, dtype=torch.float32),
         )
 
+    def get_sequence_return_stats(self) -> dict[str, float]:
+        returns = []
+        for sequence_index in self.indices:
+            rewards = self.episodes[sequence_index.episode]["rewards"][
+                sequence_index.start : sequence_index.end
+            ]
+            discounts = self.discount ** np.arange(len(rewards), dtype=np.float32)
+            returns.append(float((discounts * rewards).sum() / self.returns_scale))
+
+        returns = np.asarray(returns, dtype=np.float32)
+        return {
+            "min": float(returns.min()),
+            "max": float(returns.max()),
+            "mean": float(returns.mean()),
+            "p90": float(np.percentile(returns, 90)),
+        }
+
     def unnormalize_observations(self, observations: np.ndarray) -> np.ndarray:
         if self.observation_normalizer is None:
             return observations

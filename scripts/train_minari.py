@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import torch
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
 
 from utils.config_helpers import apply_checkpoint_config
@@ -45,12 +45,12 @@ def parse_args():
     parser.add_argument("--returns-condition", action="store_true")
     parser.add_argument("--condition-guidance-w", type=float, default=0.0)
     parser.add_argument("--returns-scale", type=float, default=1000.0)
-    parser.add_argument("--eval-return", type=float, default=1.0)
+    parser.add_argument("--eval-return", type=float)
     parser.add_argument("--eval-interval", type=int, default=100)
     parser.add_argument("--eval-episodes", type=int, default=3)
     parser.add_argument("--eval-length", type=int, default=1000)
     parser.add_argument("--eval-video", action="store_true")
-    parser.add_argument("--video-fps", type=int, default=10)
+    parser.add_argument("--video-fps", type=int, default=30)
     parser.add_argument("--checkpoint-interval", type=int, default=0)
     parser.add_argument("--checkpoint-dir")
     return parser.parse_args()
@@ -70,6 +70,23 @@ def main(logger: Logger, args: argparse.Namespace):
         include_returns=args.returns_condition,
         max_episodes=args.max_episodes,
     )
+    if args.returns_condition:
+        return_stats = dataset.get_sequence_return_stats()
+        if args.eval_return is None:
+            args.eval_return = return_stats["p90"]
+            print(
+                "Using --eval-return "
+                f"{args.eval_return:.4f} from dataset p90 scaled horizon return "
+                f"(min={return_stats['min']:.4f}, mean={return_stats['mean']:.4f}, "
+                f"max={return_stats['max']:.4f})."
+            )
+        elif args.eval_return < return_stats["min"] or args.eval_return > return_stats["max"]:
+            print(
+                "Warning: --eval-return "
+                f"{args.eval_return:.4f} is outside the scaled training return range "
+                f"[{return_stats['min']:.4f}, {return_stats['max']:.4f}]."
+            )
+
     dataloader = DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -108,12 +125,23 @@ def main(logger: Logger, args: argparse.Namespace):
     ).to(device)
 
     if args.checkpoint_dir is not None:
-        checkpoint_path = load_model_from_checkpoint_dir(
-            model,
-            args.checkpoint_dir,
-            device,
-        )
-        print(f"Loaded checkpoint from {checkpoint_path}")
+        try:
+            checkpoint_path = load_model_from_checkpoint_dir(
+                model,
+                args.checkpoint_dir,
+                device,
+            )
+            print(f"Loaded checkpoint from {checkpoint_path}")
+            model = torch.compile(model)
+        except:
+            model = torch.compile(model)
+            checkpoint_path = load_model_from_checkpoint_dir(
+                model,
+                args.checkpoint_dir,
+                device,
+            )
+            print(f"Loaded checkpoint from {checkpoint_path}")
+    
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
