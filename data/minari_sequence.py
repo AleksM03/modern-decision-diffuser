@@ -143,7 +143,7 @@ class MinariSequenceDataset(Dataset):
         trajectories = np.concatenate([actions, observations], axis=-1)
         conditions = {0: observations[0]}
 
-        rewards = episode["rewards"][start:end]
+        rewards = episode["rewards"][start:]
         discounts = self.discount ** np.arange(len(rewards), dtype=np.float32)
         returns = np.array(
             [(discounts * rewards).sum() / self.returns_scale],
@@ -163,7 +163,7 @@ class MinariSequenceDataset(Dataset):
         returns = []
         for sequence_index in self.indices:
             rewards = self.episodes[sequence_index.episode]["rewards"][
-                sequence_index.start : sequence_index.end
+                sequence_index.start :
             ]
             discounts = self.discount ** np.arange(len(rewards), dtype=np.float32)
             returns.append(float((discounts * rewards).sum() / self.returns_scale))
@@ -173,7 +173,6 @@ class MinariSequenceDataset(Dataset):
             "min": float(returns.min()),
             "max": float(returns.max()),
             "mean": float(returns.mean()),
-            "p90": float(np.percentile(returns, 90)),
         }
 
     def unnormalize_observations(self, observations: np.ndarray) -> np.ndarray:

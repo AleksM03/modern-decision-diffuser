@@ -73,10 +73,10 @@ def main(logger: Logger, args: argparse.Namespace):
     if args.returns_condition:
         return_stats = dataset.get_sequence_return_stats()
         if args.eval_return is None:
-            args.eval_return = return_stats["p90"]
+            args.eval_return = return_stats["max"]
             print(
                 "Using --eval-return "
-                f"{args.eval_return:.4f} from dataset p90 scaled horizon return "
+                f"{args.eval_return:.4f} from dataset max scaled return-to-go "
                 f"(min={return_stats['min']:.4f}, mean={return_stats['mean']:.4f}, "
                 f"max={return_stats['max']:.4f})."
             )
