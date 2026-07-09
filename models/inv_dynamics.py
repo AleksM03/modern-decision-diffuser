@@ -1,12 +1,28 @@
 import torch
 import torch.nn as nn
 
+class BasicInverseDynamics(nn.Module):
+    def __init__(self, hidden_dim, observation_dim, action_dim):
+        super(BasicInverseDynamics, self).__init__()
+        self.model = nn.Sequential(
+                nn.Linear(2 * observation_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, action_dim),
+            )
+        
+    def forward(self, x, deterministic=None):
+        return self.model(x)
 
-class InverseDynamics(nn.Module):
+
+
+
+class ARInverseDynamics(nn.Module):
     def __init__(
         self, hidden_dim, observation_dim, action_dim, low_act=-1.0, up_act=1.0
     ):
-        super(InverseDynamics, self).__init__()
+        super(ARInverseDynamics, self).__init__()
         self.observation_dim = observation_dim
         self.action_dim = action_dim
 

@@ -18,7 +18,7 @@ from utils.pytorch_utils import load_model_from_checkpoint_dir
 from data import MinariSequenceDataset, collate_trajectory_batches
 from models import DecisionDiffuser, TemporalUnet
 from models.diffusion import GaussianDiffusion
-from models.inv_dynamics import InverseDynamics
+from models.inv_dynamics import ARInverseDynamics, BasicInverseDynamics
 
 
 def move_batch(batch, device):
@@ -76,7 +76,7 @@ def main(logger: Logger, args: argparse.Namespace):
             args.eval_return = return_stats["max"]
             print(
                 "Using --eval-return "
-                f"{args.eval_return:.4f} from dataset max scaled return-to-go "
+                f"{args.eval_return:.4f} from dataset max scaled horizon return "
                 f"(min={return_stats['min']:.4f}, mean={return_stats['mean']:.4f}, "
                 f"max={return_stats['max']:.4f})."
             )
@@ -106,11 +106,14 @@ def main(logger: Logger, args: argparse.Namespace):
         clip_denoised=True,
         predict_epsilon=True,
     )
-    inverse_dynamics = InverseDynamics(
+    #inverse_dynamics = ARInverseDynamics(hidden_dim=args.hidden_dim, observation_dim=dataset.observation_dim, action_dim=dataset.action_dim,)
+
+    inverse_dynamics = BasicInverseDynamics(
         hidden_dim=args.hidden_dim,
         observation_dim=dataset.observation_dim,
         action_dim=dataset.action_dim,
     )
+
     model = DecisionDiffuser(
         denoiser=denoiser,
         diffusion=diffusion,
