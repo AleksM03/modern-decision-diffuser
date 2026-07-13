@@ -71,8 +71,8 @@ def rollout_policy(model, env, dataset, device, args, *, record_video=False):
         rewards.append(float(reward))
         actions.append(action.reshape(-1))
 
-        #if args.returns_condition:
-            #target_return = (target_return - float(reward) / args.returns_scale) / dataset.discount
+        if args.returns_condition:
+            target_return = (target_return - float(reward) / args.returns_scale) / dataset.discount
 
         if "success" in info:
             success = float(info["success"])
