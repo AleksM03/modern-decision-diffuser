@@ -114,3 +114,34 @@ class Conv1dBlock(nn.Module):
 
     def forward(self, x):
         return self.block(x)
+
+class EMA():
+    '''
+        exponential moving average
+    '''
+    def __init__(self, beta, step_start=2000):
+        super().__init__()
+        self.beta = beta
+        self.step_start = step_start
+
+    def update_model_average(self, ma_model, current_model):
+        current = current_model._orig_mod if hasattr(current_model, "_orig_mod") else current_model
+        for current_params, ma_params in zip(current.parameters(), ma_model.parameters()):
+            old_weight, up_weight = ma_params.data, current_params.data
+            ma_params.data = self.update_average(old_weight, up_weight)
+
+    def update_average(self, old, new):
+        if old is None:
+            return new
+        return old * self.beta + (1 - self.beta) * new
+
+    def reset_parameters(self, current_model, ma_model):
+        current = current_model._orig_mod if hasattr(current_model, "_orig_mod") else current_model
+        ma_model.load_state_dict(current.state_dict())
+
+    def step_ema(self, current_model, ma_model, step):
+        if step < self.step_start:
+            self.reset_parameters(current_model, ma_model)
+            return
+        self.update_model_average(ma_model, current_model)
+

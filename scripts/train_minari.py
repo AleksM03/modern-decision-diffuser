@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os
 import sys
 import time
@@ -14,6 +15,7 @@ from utils.config_helpers import apply_checkpoint_config
 from utils.eval_helpers import run_eval
 from utils.logging import Logger, dump_log
 from utils.pytorch_utils import load_model_from_checkpoint_dir
+from utils.model_helpers import EMA
 
 from data import MinariSequenceDataset, collate_trajectory_batches
 from models import DecisionDiffuser, TemporalUnet
@@ -45,6 +47,8 @@ def parse_args():
     parser.add_argument("--returns-condition", action="store_true")
     parser.add_argument("--condition-guidance-w", type=float, default=0.0)
     parser.add_argument("--returns-scale", type=float, default=1000.0)
+    parser.add_argument("--ema-beta", type=float, default=0.995)
+    parser.add_argument("--step-start-ema", type=int, default=2000)
     parser.add_argument("--eval-return", type=float)
     parser.add_argument("--eval-interval", type=int, default=100)
     parser.add_argument("--eval-episodes", type=int, default=3)
@@ -127,6 +131,10 @@ def main(logger: Logger, args: argparse.Namespace):
         condition_guidance_w=args.condition_guidance_w,
     ).to(device)
 
+    ema = EMA(args.ema_beta, args.step_start_ema)
+
+    ema_model = copy.deepcopy(model)
+
     if args.checkpoint_dir is not None:
         try:
             checkpoint_path = load_model_from_checkpoint_dir(
@@ -144,9 +152,10 @@ def main(logger: Logger, args: argparse.Namespace):
                 device,
             )
             print(f"Loaded checkpoint from {checkpoint_path}")
-    
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+
+    ema.reset_parameters(model, ema_model)
 
     model.train()
     data_iter = iter(dataloader)
@@ -168,6 +177,9 @@ def main(logger: Logger, args: argparse.Namespace):
         loss.backward()
         optimizer.step()
 
+        if step%10 == 0:
+            ema.step_ema(model, ema_model, step)
+
         train_row = {f"train/{key}": value for key, value in info.items()}
         train_row["train/lr"] = optimizer.param_groups[0]["lr"]
         train_row["train/step_time"] = time.perf_counter() - step_start_time
@@ -175,7 +187,7 @@ def main(logger: Logger, args: argparse.Namespace):
             train_row["train/returns_mean"] = returns.mean()
 
         if args.eval_interval > 0 and (step + 1) % args.eval_interval == 0:
-            eval_row = run_eval(model, dataset, device, args, logger, step + 1)
+            eval_row = run_eval(ema_model, dataset, device, args, logger, step + 1)
             train_row.update(eval_row)
 
         logger.log(train_row, step + 1)
