@@ -122,7 +122,7 @@ def remove_functions(obj):
     return obj
 
 
-def dump_log(agent: nn.Module, logger: Logger, args, save_dir: str):
+def dump_log(agent: nn.Module, logger: Logger, args, save_dir: str, ema_model: nn.Module):
     """Dump the log to a pkl file and checkpoint the agent."""
     cur_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     config = remove_functions(vars(args))
@@ -140,5 +140,6 @@ def dump_log(agent: nn.Module, logger: Logger, args, save_dir: str):
     with open(os.path.join(save_dir, "log.pkl"), "wb") as f:
         pickle.dump(data, f)
 
-    torch.save(agent.state_dict(), os.path.join(save_dir, "agent.pt"))
+    torch.save(agent.state_dict(), os.path.join(save_dir, "raw_model.pt"))
+    torch.save(ema_model.state_dict(), os.path.join(save_dir, "ema_model.pt"))
     logger.flush()

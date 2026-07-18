@@ -202,7 +202,7 @@ def main(logger: Logger, args: argparse.Namespace):
             {key: f"{value.item():.4f}" for key, value in info.items()}
         )
 
-    dump_log(model, logger, args, logger.log_dir)
+    dump_log(model, logger, args, logger.log_dir, ema_model)
 
 
 def make_logger(args: argparse.Namespace) -> Logger:
